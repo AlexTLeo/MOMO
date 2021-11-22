@@ -4,7 +4,7 @@
 **Author:** ***Alex Thanaphon Leonardi***<br>
 
 # MOMO: [M]ark 1 [O]rbital [M]anipulator of [O]bjects
-This program, written in C, is comprised of 5 different processes that work together and comunicate together via IPC (signals and pipes) to simulate the mechanisms behind an industrial hoist.
+This program, written in C, comprises 5 different processes that work together and communicate together via IPC (signals and pipes) to simulate the mechanisms behind an industrial hoist.
 (For my own entertainment, I imagined this hoist to be attached to a satellite).
 
 ## Running The Program
