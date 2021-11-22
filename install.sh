@@ -1,4 +1,5 @@
 #!/bin/bash
+# compiles the source files, links the math library, and creates the executable.
 gcc src/watchdog.c -lm -o bin/watchdog
 gcc src/commander.c -lm -o bin/commander
 gcc src/inspector.c -lm -o bin/inspector
