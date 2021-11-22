@@ -16,6 +16,7 @@ sudo apt-get install gcc
 Then, navigate to the ***momo*** directory and run the install script.
 ```
 cd example/momo/
+sudo chmod +x install.sh
 ./install.sh
 ```
 
