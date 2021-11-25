@@ -1,30 +1,8 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <termios.h>
-#include <time.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <math.h>
-
 #include "../include/common.h"
 
 /*
   Header file for all motors
 */
-
-// Closes the specified pipe
-void closePipe(int fd) {
-  if (close(fd) == -1) {
-    printf("Error %d in ", errno);
-    fflush(stdout);
-    perror("motor.h closePipe");
-  }
-}
 
 // Creates and opens the pipes
 // fd[0] commanderPipeName, fd[1] inspectorPipeName
@@ -36,6 +14,8 @@ void activateMotor(int fd[2], char* commanderPipeName, char* inspectorPipeName) 
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("motor.h commander mkfifo");
+    writeErrorLog(fdlog_err, "Motor: commanderPipe mkfifo failed");
+    exit(-1);
   }
 
   fd[0] = open(commanderPipeName, O_RDONLY);
@@ -43,6 +23,8 @@ void activateMotor(int fd[2], char* commanderPipeName, char* inspectorPipeName) 
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("motor.h commander pipe open");
+    writeErrorLog(fdlog_err, "Motor: commanderPipe open failed");
+    exit(-1);
   }
 
   // INSPECTOR pipe
@@ -51,6 +33,8 @@ void activateMotor(int fd[2], char* commanderPipeName, char* inspectorPipeName) 
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("motor.h inspector mkfifo");
+    writeErrorLog(fdlog_err, "Motor: inspectorPipe mkfifo failed");
+    exit(-1);
   }
 
   fd[1] = open(inspectorPipeName, O_WRONLY);
@@ -58,6 +42,8 @@ void activateMotor(int fd[2], char* commanderPipeName, char* inspectorPipeName) 
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("motor.h inspector pipe open");
+    writeErrorLog(fdlog_err, "Motor: inspectorPipe open failed");
+    exit(-1);
   }
 }
 
@@ -83,6 +69,8 @@ float readSpeed(int fd) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("motor.h select");
+    writeErrorLog(fdlog_err, "Motor: readSpeed select failed");
+    exit(-1);
   } else if (retval) {
     if (FD_ISSET(fd, &fdSet)) {
       // read speed from pipe
@@ -104,6 +92,8 @@ void writeCoordinates(int fd, float coordinates) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("motor.h coordinate write");
+    writeErrorLog(fdlog_err, "Motor: writeCoordinates write failed");
+    exit(-1);
   }
 }
 
@@ -121,6 +111,11 @@ void motorLoop (char* axis) {
   float newSpeedStep = 0;
   float currentSpeed = 0;
 
+  fdlog_info = openInfoLog();
+  fdlog_err = openErrorLog();
+
+  writeInfoLog(fdlog_info, "Motor: booting up...");
+
   srand(time(0));
 
   // selecting correct motor properties
@@ -137,24 +132,30 @@ void motorLoop (char* axis) {
   } else {
     printf("Error %d in ", errno);
     perror("motorLoop axis selection");
+    writeErrorLog(fdlog_err, "Motor: motorLoop axis selection failed");
+    exit(-1);
   }
 
   // Send PID to inspector
   writePID(pidPipeName, true);
+  writeInfoLog(fdlog_info, "Motor: sent PID to inspector");
 
   activateMotor(fd, commanderPipeName, inspectorPipeName);
 
   while (1) {
     newSpeedStep = readSpeed(fd[0]);
-    if (newSpeedStep != 0) {
-      // printf("Motor%s new speed read: %f\n", axis, newSpeedStep);
-      // fflush(stdout);
-    }
 
-    if (round(newSpeedStep) == 500) {
+    if (round(newSpeedStep) == 502) {
+      // SHUTDOWN command
+      writeInfoLog(fdlog_info, "Motor: SHUTDOWN command received");
+      closeLog(fdlog_info);
+      closeLog(fdlog_err);
+      closePipe(fd[0]);
+      closePipe(fd[1]);
+      exit(0);
+    } else if (round(newSpeedStep) == 500) {
       // RESET command
-      // printf("Motor%s: RESET received\n", axis);
-      // fflush(stdout);
+      writeInfoLog(fdlog_info, "Motor: RESET command received");
       currentSpeed = 0;
       position = -maxAxis; // FIXME: too sudden of a change
     } else if (isStopped) {
@@ -162,12 +163,14 @@ void motorLoop (char* axis) {
     } else if (round(newSpeedStep) == 501) {
       // NON-EMERGENCY STOP
       currentSpeed = 0;
+      writeInfoLog(fdlog_info, "Motor: stop request received");
     } else {
       // normal motor movement
       if (newSpeedStep == 0) {
         // pipe EOF - ignore this value
       } else {
         currentSpeed += newSpeedStep;
+        writeInfoLog(fdlog_info, "Motor: velocity command received");
       }
 
       position += currentSpeed;
@@ -175,6 +178,7 @@ void motorLoop (char* axis) {
 
     if (fabs(position) > maxAxis || position < 0) {
       // reached end of track
+      writeInfoLog(fdlog_info, "Motor: reached end of track!");
       // minor correction to make sure position is always within bounds
       if (position > 0) {
         position = maxAxis;

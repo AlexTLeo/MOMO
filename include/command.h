@@ -1,16 +1,3 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <termios.h>
-#include <time.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <signal.h>
-
 #include "../include/common.h"
 
 /*
@@ -47,6 +34,8 @@ void commandMotor (int fd, float speed) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h motorcomm write");
+    writeErrorLog(fdlog_err, "command.h: commandMotor write failed");
+    exit(-1);
   }
 }
 
@@ -61,6 +50,8 @@ int openPipeMotorComm(char *axis) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h mkfifo");
+    writeErrorLog(fdlog_err, "command.h: openPipeMotorComm mkfifo failed");
+    exit(-1);
   }
 
   fd = open(pipeName, O_WRONLY);
@@ -68,6 +59,8 @@ int openPipeMotorComm(char *axis) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h motorcomm open");
+    writeErrorLog(fdlog_err, "command.h: openPipeMotorComm open failed");
+    exit(-1);
   }
 
   return fd;
@@ -79,6 +72,8 @@ void closePipeMotorComm(int fd) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h motorcomm close");
+    writeErrorLog(fdlog_err, "command.h: closePipeMotorComm close failed");
+    exit(-1);
   }
 }
 
@@ -93,6 +88,8 @@ int openPipeMotorInspector(char *axis) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h motorinspector mkfifo");
+    writeErrorLog(fdlog_err, "command.h: openPipeMotorInspector mkfifo failed");
+    exit(-1);
   }
 
   fd = open(pipeName, O_RDONLY);
@@ -100,6 +97,8 @@ int openPipeMotorInspector(char *axis) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h motorinspector open");
+    writeErrorLog(fdlog_err, "command.h: openPipeMotorInspector open failed");
+    exit(-1);
   }
 
   return fd;
@@ -111,6 +110,8 @@ void closePipeMotorInspector (int fd) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h motorinspector close");
+    writeErrorLog(fdlog_err, "command.h: closePipeMotorInspector close failed");
+    exit(-1);
   }
 }
 
@@ -121,6 +122,8 @@ float readCoordinates (int fd) {
     printf("Error %d in ", errno);
     fflush(stdout);
     perror("command.h motorinspector read");
+    writeErrorLog(fdlog_err, "command.h: readCoordinates read failed");
+    exit(-1);
   }
 
   return coordinate;

@@ -26,10 +26,14 @@ int main (int argc, char** argv) {
   pid_t pid_motorx;
   pid_t pid_motorz;
   float simulationSpeed = SIM_SPEED;
+  int fdlog_info;
+  int fdlog_err;
 
-  // printf("Inspector: booting up...\n");
-  // printf("Inspector: running\n");
-  // fflush(stdout);
+  fdlog_info = openInfoLog();
+  fdlog_err = openErrorLog();
+
+  writeInfoLog(fdlog_info, "Inspector: booting up...");
+  writeInfoLog(fdlog_info, "Inspector: running");
 
   // retrieving watchdog PID
   pid_watchdog = readPID("tmp/PID_watchdog");
@@ -37,8 +41,8 @@ int main (int argc, char** argv) {
   // The first line is the PID of the motor
   pid_motorx = readPID("tmp/PID_motorx");
   pid_motorz = readPID("tmp/PID_motorz");
+  writeInfoLog(fdlog_info, "Inspector: motor processes detected");
   // printf("Inspector: motor processes detected (PID_X: %d, PID_Z: %d)\n", pid_motorx, pid_motorz);
-  // fflush(stdout);
 
   pid_child = fork();
   if (pid_child != 0) {
@@ -46,10 +50,12 @@ int main (int argc, char** argv) {
     struct sigaction sa;
 
     // sending inspector subprocess PID to watchdog
+    writePID("tmp/PID_inspector", false);
+    // sending inspector subprocess PID to commander
     writePID("tmp/PID_inspector", true);
+    writeInfoLog(fdlog_info, "Inspector: sending PID to watchdog");
 
-    // printf("Inspector: awaiting commands...\n");
-    // fflush(stdout);
+    writeInfoLog(fdlog_info, "Inspector: awaiting commands...");
     // Opening pipes for motors x and z
     fdmc_x = openPipeMotorComm("x");
     fdmc_z = openPipeMotorComm("z");
@@ -68,17 +74,15 @@ int main (int argc, char** argv) {
           // signal the watchdog to send its PID to the new motors
           kill(pid_watchdog, SIGUSR2);
 
-          // printf("Inspector: EMERGENCY STOP...\n");
-          // fflush(stdout);
+          writeInfoLog(fdlog_info, "Inspector: EMERGENCY STOP signal sent");
 
           // immediately kill motorx and motorz (using SIGKILL for safety reasons:
           // the hoist must stop IMMEDIATELY) and then restart the two processes
           kill(pid_motorx, SIGKILL);
           kill(pid_motorz, SIGKILL);
 
-          // printf("Inspector: Motors have been stopped.\n");
-          // printf("Inspector: Motors reinitialization in progress...\n");
-          // fflush(stdout);
+          writeInfoLog(fdlog_info, "Inspector: Motors have been stopped");
+          writeInfoLog(fdlog_info, "Inspector: Motor reinitialization in progress...");
 
           // exec motorx motorz
           char* arg_listx[] = {"./bin/motorx", NULL};
@@ -95,19 +99,15 @@ int main (int argc, char** argv) {
           // read PID
           pid_motorx = readPID("tmp/PID_motorx");
           pid_motorz = readPID("tmp/PID_motorz");
-          // printf("Inspector: motor processes detected (PID_X: %d, PID_Z: %d)\n", pid_motorx, pid_motorz);
-          // fflush(stdout);
-          //
-          // printf("Inspector: motors have been re-initialized\n");
-          // printf("Inspector: awaiting commands...\n");
-          // fflush(stdout);
+          writeInfoLog(fdlog_info, "Inspector: motor processes detected");
+          writeInfoLog(fdlog_info, "Inspector: motors have been re-initialized");
+          writeInfoLog(fdlog_info, "Inspector: awaiting commands...");
 
           break;
         case 114:
           // r: RESET
           kill(pid_watchdog, SIGUSR1);
-          // printf("Inspector: RESET signal sent\n");
-          // fflush(stdout);
+          writeInfoLog(fdlog_info, "Inspector: RESET signal sent to motors");
 
           commandMotor(fdmc_x, 500);
           commandMotor(fdmc_z, 500);
@@ -123,6 +123,9 @@ int main (int argc, char** argv) {
     int fdmi_z;
     float coordx;
     float coordz;
+
+    // sending inspector subprocess PID to commander
+    writePID("tmp/PID_inspector_sub", true);
 
     fdmi_x = openPipeMotorInspector("x");
     fdmi_z = openPipeMotorInspector("z");
@@ -202,7 +205,7 @@ void printInfo(float coordx, float coordz) {
   terminalColor(31, true);
   printf("RESET HOIST: ");
   terminalColor(37, true);
-  printf("R");
+  printf("r");
   printf(" | ");
   terminalColor(41, true);
   printf("EMERGENCY STOP: ");

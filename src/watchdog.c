@@ -17,23 +17,32 @@ bool isKiller = true;
 int main (int argc, char** argv) {
   struct sigaction sa;
   char* pipeNameInspector = "tmp/PID_inspector";
+  int fdlog_info;
+  int fdlog_err;
+
+  fdlog_info = openInfoLog();
+  fdlog_err = openErrorLog();
+
+  writeInfoLog(fdlog_info, "Watchdog: booting up...");
 
   memset(&sa, 0, sizeof(sa));
   sa.sa_handler = &signalHandler;
   sigaction(SIGUSR1, &sa, NULL);
   sigaction(SIGUSR2, &sa, NULL);
 
-  // printf("Watchdog: running...\n");
-  // fflush(stdout);
+  writeInfoLog(fdlog_info, "Watchdog: running");
 
   sleep(1); // required to avoid deadlock (not 100% sure why...)
 
+  writeInfoLog(fdlog_info, "Watchdog: sending PID to other processes...");
   writePID("tmp/PID_watchdog", false); // for commander
   writePID("tmp/PID_watchdog", false); // for inspector
   writePID("tmp/PID_watchdog", false); // for motorx
   writePID("tmp/PID_watchdog", true); // for motorz
+  writeInfoLog(fdlog_info, "Watchdog: PID has been sent to other processes");
 
   pid_inspector = readPID(pipeNameInspector);
+  writeInfoLog(fdlog_info, "Watchdog: inspector PID received");
 
   while (1) {
     // printf("Watchdog: RESET signal timer started...\n");
@@ -43,6 +52,7 @@ int main (int argc, char** argv) {
     sleep(RESET_TIME);
 
     if (isKiller) {
+      writeInfoLog(fdlog_info, "Watchdog: RESET signal sent");
       // printf("Watchdog: RESET signal sent\n");
       // fflush(stdout);
       kill(pid_inspector, SIGUSR1);
