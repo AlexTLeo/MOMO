@@ -22,7 +22,7 @@ sudo chmod +x install.sh
 
 Then, simply execute the **run** file!
 ```
-./run
+./run.sh
 ```
 
 ## Behind The Scenes...
@@ -46,7 +46,8 @@ The inspector process displays relevant information to the user (a graphical rep
 
 ### 4&5. MotorX and MotorZ
 These two processes simply receive velocity commands and calculate a new position every simulation cycle, plus a randomized error that is added onto the actual position and serves the purpose of simulating a real-life measurement error due to sensors' physical limitations and other disturbances.
-A velocity command of **500** corresponds to the **RESET** command, **501** corresponds to the **non-emergency stop** command.
+A velocity command of **500** corresponds to the **RESET** command, **501** corresponds to the **non-emergency stop** command, **502** corresponds to **simulation shutdown**.
 
 ## Conclusion
 This was a very interesting assignment as it allowed for a more practical view of how C and its IPC mechanisms could be used in a real life scenario.
+An improvement, for release 1.1, is to kill the entire program when an error is detected. Currently, an exit with code -1 is called on the process throwing the error, which will block all other processes but might not necessarily terminate them.
