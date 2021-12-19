@@ -1,6 +1,6 @@
 **Institution:** Università di Genova<br>
 **Course:** MSc in Robotics Engineering<br>
-**Subject:** Research Track 1<br>
+**Subject:** Advanced and Robot Programming<br>
 **Author:** ***Alex Thanaphon Leonardi***<br>
 
 # MOMO: [M]ark 1 [O]rbital [M]anipulator of [O]bjects
